@@ -82,7 +82,7 @@ int main(int argc, char *argv[]) {
 
         printf("Ocitano: %s, BTN1=[%c]\n", btn_str, btn_str[4]);  // debug, obrisati posle
 
-        if (btn_str[4] == '0') {  // BTN1 je na indexu [4]
+        if (btn_str[4] == '1') {  // BTN1 je na indexu [4]
             free(btn_str);
             break;
         }
