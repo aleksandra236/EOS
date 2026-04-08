@@ -10,21 +10,18 @@
 
 int main(int argc, char *argv[]) {
 
-    // provera argumenta
     if (argc != 2) {
         printf("Upotreba: %s <ime_log_fajla>\n", argv[0]);
         return -1;
     }
 
-    const char *log_fajl = argv[1];  // ime log fajla iz argumenta
+    const char *log_fajl = argv[1];
 
-    // unos poruke - scanf, \n umesto fflush, bez razmaka
     char poruka[64];
     printf("Unesite poruku (bez razmaka):\n");
     scanf("%s", poruka);
     printf("Poruka primljena: %s\n", poruka);
 
-    // citanje /dev/switch
     FILE *fp = fopen(SW_DEV, "r");
     if (fp == NULL) {
         printf("Greska pri otvaranju %s\n", SW_DEV);
@@ -32,9 +29,9 @@ int main(int argc, char *argv[]) {
     }
 
     char *sw_str;
-    size_t num_of_bytes = 6;                        // "0b1010" = 6 karaktera
-    sw_str = (char *)malloc(num_of_bytes + 1);      // +1 za terminator
-    getline(&sw_str, &num_of_bytes, fp);             // cita stanje prekidaca
+    size_t num_of_bytes = 6;
+    sw_str = (char *)malloc(num_of_bytes + 1);
+    getline(&sw_str, &num_of_bytes, fp);
 
     if (fclose(fp)) {
         printf("Greska pri zatvaranju %s\n", SW_DEV);
@@ -42,18 +39,15 @@ int main(int argc, char *argv[]) {
         return -1;
     }
     printf("Stanje prekidaca: %s\n", sw_str);
-    sleep(1);   // ceka sekundu da korisnik vidi ispis
+    sleep(1);
 
-    // pali LED prema stanju prekidaca
     fp = fopen(LED_DEV, "w");
     if (fp == NULL) {
         printf("Greska pri otvaranju %s\n", LED_DEV);
         free(sw_str);
         return -1;
     }
-
-    fputs(sw_str, fp);  // isti string iz /dev/switch ide direktno u /dev/led
-
+    fputs(sw_str, fp);
     if (fclose(fp)) {
         printf("Greska pri zatvaranju %s\n", LED_DEV);
         free(sw_str);
@@ -61,8 +55,10 @@ int main(int argc, char *argv[]) {
     }
     printf("LED postavljene prema stanju prekidaca.\n");
 
-    // cekanje na BTN0 - active low, '0' znaci pritisnut
-    printf("Pritisnite BTN0 za nastavak...\n");
+    // cekanje na BTN1
+    // format "0bXXXX", indeksi: [2]=BTN3, [3]=BTN2, [4]=BTN1, [5]=BTN0
+    // active low - '0' znaci pritisnut
+    printf("Pritisnite BTN1 za nastavak...\n");
     while (1) {
 
         fp = fopen(BTN_DEV, "r");
@@ -76,20 +72,26 @@ int main(int argc, char *argv[]) {
         size_t btn_bytes = 6;
         btn_str = (char *)malloc(btn_bytes + 1);
         getline(&btn_str, &btn_bytes, fp);
-        fclose(fp);
 
-        // format "0bXXXX", BTN0 je na indexu [5], '0' znaci pritisnut
-        if (btn_str[5] == '0') {
+        if (fclose(fp)) {
+            printf("Greska pri zatvaranju %s\n", BTN_DEV);
+            free(btn_str);
+            free(sw_str);
+            return -1;
+        }
+
+        printf("Ocitano: %s, BTN1=[%c]\n", btn_str, btn_str[4]);  // debug, obrisati posle
+
+        if (btn_str[4] == '0') {  // BTN1 je na indexu [4]
             free(btn_str);
             break;
         }
 
         free(btn_str);
-        usleep(100000);  // 100ms pauza izmedju ocitavanja
+        usleep(100000);
     }
-    printf("BTN0 pritisnut!\n");
+    printf("BTN1 pritisnut!\n");
 
-    // upis u log fajl - "a" = append mod, ne brise stari sadrzaj
     fp = fopen(log_fajl, "a");
     if (fp == NULL) {
         printf("Greska pri otvaranju %s\n", log_fajl);
@@ -103,9 +105,8 @@ int main(int argc, char *argv[]) {
         return -1;
     }
 
-    free(sw_str);  // oslobadja memoriju alociranu sa malloc
+    free(sw_str);
 
-    // citanje log fajla i ispis karakter po karakter
     printf("\n--- Sadrzaj log fajla: %s ---\n", log_fajl);
     fp = fopen(log_fajl, "r");
     if (fp == NULL) {
@@ -113,7 +114,7 @@ int main(int argc, char *argv[]) {
         return -1;
     }
 
-    int c;  // mora int, ne char - na ARM char je unsigned i ne moze da predstavi EOF(-1)
+    int c;
     while ((c = getc(fp)) != EOF) {
         putchar(c);
     }
